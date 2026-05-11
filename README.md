@@ -1,119 +1,203 @@
-# Telco Project
+# Telco Project — i2i Systems
 
-## How to Set Up Your Repository
+> A SQL analytics exercise on synthetic Turkish telecom data. The work consists of designing a relational schema, ingesting three CSV files into Oracle Database 21c Express Edition, and answering 11 business questions through SQL queries.
 
-**WARNING**: This is a template project. Do not fork this repository.
-
-Please follow the visual steps below to create and set up the project repository on your own GitHub profile.
-
-1. Click the **"Use this template"** button at the top right of this page.
-
-<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/547179ce-f2ac-4394-ad63-11e35a7daa74" />
-
-<br><br>
-
-2. Select **"Create a new repository"** to generate your own public repository for this task.
-
-<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/a1893fef-731f-4c9a-bf68-79db6a39bea9" />
-
-<br><br>
-
-3. Name your repository as **"telco-project"** and click the **"Create repository"** button.
-
-<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/7fe03880-8d77-4fcd-a076-827aab2328e5" />
-
-<br><br>
-
-Upload all of your solutions to `github.com/yourusername/telco-project`.
+This repository is my solution to the [i2i Systems Telco Project](https://github.com/hantheemp/i2i-systems-telco-example) template.
 
 ---
 
-## Overview
+## 🛠️ Tech Stack
 
-In this project, you will take on the role of a developer at **i2i Systems**, where you are tasked with fulfilling various team requests through database operations. 
-
-You will receive `.csv` files containing telecom-related data to use for answering the provided questions. Please organize your work as follows:
-* Save your SQL query solutions in a separate file (e.g., `SOLUTIONS.sql`).
-* Include your database table creation scripts, along with their respective indexes and constraints, in another separate file (e.g., `TABLE_CREATION_SCRIPTS.sql`).
-
-You must **create your own repository using this template** and upload your work there. 
-Do **not** attempt to push changes directly to this repository or any of its original branches.
+| Component | Version / Detail |
+|---|---|
+| Database | Oracle Database 21c Express Edition (`gvenzl/oracle-xe:21-slim`) |
+| Runtime | Docker Desktop (Windows / WSL 2) |
+| SQL Client | DBeaver Community 26.0.x |
+| Character set | AL32UTF8 (required for Turkish characters) |
 
 ---
 
-## Operational Requirements
+## 📁 Repository Structure
 
-1. **Oracle XE Setup**
-  * Create a [Docker](https://www.docker.com/products/docker-desktop/) container running **Oracle XE**.  
-  * Ensure that the database is properly configured and accessible from your local machine.
-
-2. **DBeaver Installation**
-  * Download and install [DBeaver](https://dbeaver.io/).  
-  * Establish a connection to your local Oracle XE instance using the DBeaver client.
-
-3. **Data Import**
-  * Using the provided `.csv` files containing telecom data, design and **create the necessary tables** in Oracle XE. 
-  * **Import the data** from the `.csv` files into your newly created tables, ensuring the schema accurately reflects the provided dataset.
-
-4. **Bonus Tasks (Optional for Extra Points)**
-  * **Docker Compose & Reproducibility:** Provide a `docker-compose.yml` file to spin up the Oracle XE database environment easily. Include clear documentation in your repository (with screenshots) explaining the step-by-step process to reproduce your setup.
-  * **Automated Database Seeding:** Configure your Docker Compose setup to automatically run your database scripts (table creation) upon container initialization.
+```
+telco-project/
+├── README.md                      ← this file
+├── TABLE_CREATION_SCRIPTS.sql     ← DDL: tables, constraints, indexes
+├── SOLUTIONS.sql                  ← 11 queries with detailed comments
+├── CUSTOMERS.csv                  ← 10,000 customer records
+├── MONTHLY_STATS.csv              ← 9,950 monthly usage records
+└── TARIFFS.csv                    ← 4 tariff definitions
+```
 
 ---
 
-## Functional Requirements
+## 🚀 Quick Start (Reproducible Setup)
 
-You must write SQL queries to address the scenarios listed below. For each query, include comments explaining your approach in **at least three sentences**. Submissions with missing answers or explanations shorter than the required length will **not be evaluated** and will receive **0 points**.
+### Prerequisites
+
+- Docker Desktop installed and running
+- DBeaver (Community Edition) installed
+- ~1 GB free disk space for the Oracle image
+
+> **Note for Apple Silicon / ARM users:** `gvenzl/oracle-xe` does not support ARM64. Use `gvenzl/oracle-free:23-slim` instead and substitute service name `FREEPDB1` for `XEPDB1` below. All queries work unchanged.
+
+### 1 · Start Oracle XE in Docker
+
+```bash
+docker run -d \
+  --name oracle-xe \
+  -p 1521:1521 \
+  -e ORACLE_PASSWORD=OraclePass123 \
+  -e APP_USER=telco_user \
+  -e APP_USER_PASSWORD=TelcoPass123 \
+  -v oracle-volume:/opt/oracle/oradata \
+  gvenzl/oracle-xe:21-slim
+```
+
+PowerShell one-liner:
+
+```powershell
+docker run -d --name oracle-xe -p 1521:1521 -e ORACLE_PASSWORD=OraclePass123 -e APP_USER=telco_user -e APP_USER_PASSWORD=TelcoPass123 -v oracle-volume:/opt/oracle/oradata gvenzl/oracle-xe:21-slim
+```
+
+Wait for `DATABASE IS READY TO USE!` to appear in the container logs (≈ 1–3 minutes on first run):
+
+```bash
+docker logs -f oracle-xe
+```
+
+### 2 · Connect via DBeaver
+
+Create a new **Oracle** connection with these parameters:
+
+| Setting | Value |
+|---|---|
+| Host | `localhost` |
+| Port | `1521` |
+| Database (use **Service Name**, not SID) | `XEPDB1` |
+| Username | `telco_user` |
+| Password | `TelcoPass123` |
+
+DBeaver will offer to download the Oracle JDBC driver on first connect — accept.
+
+### 3 · Create the schema
+
+Open `TABLE_CREATION_SCRIPTS.sql` in a DBeaver SQL Editor and execute the whole script (`Alt + X`). This creates the three tables, all primary / foreign keys, check constraints, and helper indexes.
+
+### 4 · Import the CSV data
+
+For each CSV file, in this **strict order** (to satisfy foreign-key constraints):
+
+1. **TARIFFS.csv** → `TARIFFS` table
+2. **CUSTOMERS.csv** → `CUSTOMERS` table
+3. **MONTHLY_STATS.csv** → `MONTHLY_STATS` table
+
+For each one: right-click the target table in DBeaver → **Import Data** → select **CSV** → pick the file → set **Encoding** to `utf-8`.
+
+> **CUSTOMERS.csv only:** on the column-mapping screen, set the `SIGNUP_DATE` column's format to `dd/MM/yyyy`. Otherwise the import will fail with `ORA-01843: not a valid month`.
+
+### 5 · Verify the import
+
+Run this sanity check:
+
+```sql
+SELECT 'TARIFFS'       AS TABLE_NAME, COUNT(*) AS ROW_COUNT FROM TARIFFS
+UNION ALL SELECT 'CUSTOMERS',     COUNT(*) FROM CUSTOMERS
+UNION ALL SELECT 'MONTHLY_STATS', COUNT(*) FROM MONTHLY_STATS;
+```
+
+Expected result:
+
+| TABLE_NAME | ROW_COUNT |
+|---|---:|
+| TARIFFS | 4 |
+| CUSTOMERS | 10,000 |
+| MONTHLY_STATS | 9,950 |
+
+### 6 · Run the queries
+
+Open `SOLUTIONS.sql` in DBeaver. Place the cursor inside any query and press `Ctrl + Enter` to execute it individually.
 
 ---
 
-### 1. Tariff-Based Customer Queries
+## 🗺️ Schema Design
 
-**1.1** List the customers who are subscribed to the 'Kobiye Destek' tariff.  
-**1.2** Find the newest customer who subscribed to this tariff.
+```
+┌────────────────────┐         ┌────────────────────┐
+│      TARIFFS       │         │     CUSTOMERS      │
+├────────────────────┤         ├────────────────────┤
+│ TARIFF_ID    PK    │◄────┐   │ CUSTOMER_ID    PK  │◄────┐
+│ NAME         UQ    │     │   │ NAME               │     │
+│ MONTHLY_FEE        │     └───│ TARIFF_ID      FK  │     │
+│ DATA_LIMIT         │         │ CITY               │     │
+│ MINUTE_LIMIT       │         │ SIGNUP_DATE        │     │
+│ SMS_LIMIT          │         └────────────────────┘     │
+└────────────────────┘                                    │
+                                                          │
+                              ┌────────────────────┐      │
+                              │   MONTHLY_STATS    │      │
+                              ├────────────────────┤      │
+                              │ ID             PK  │      │
+                              │ CUSTOMER_ID  FK/UQ │──────┘
+                              │ DATA_USAGE         │
+                              │ MINUTE_USAGE       │
+                              │ SMS_USAGE          │
+                              │ PAYMENT_STATUS     │
+                              └────────────────────┘
+```
 
----
+### Key design decisions
 
-### 2. Tariff Distribution
-
-**2.1** Find the distribution of tariffs among the customers.
-
----
-
-### 3. Customer Signup Analysis
-
-**3.1** Identify the earliest customers to sign up.  
-*(Hint: The earliest customers might not necessarily have the lowest IDs.)*
-
-**3.2** Find the distribution of these earliest customers across different cities, including the total count for each city.
-
----
-
-### 4. Missing Monthly Records
-
-**4.1** Every customer has a monthly fee, and the dataset contains this month's usage values. However, an insertion error occurred, and some customers' monthly records are missing. Identify the IDs of these missing customers.
-
-**4.2** Find the distribution of these missing customers across different cities.
-
----
-
-### 5. Usage Analysis
-
-**5.1** Find the customers who have used at least 75% of their data limit.  
-**5.2** Identify the customers who have completely exhausted all of their package limits (data, minutes, and SMS).
+- **`VARCHAR2(... CHAR)` semantics** — Turkish characters (ş, ğ, ı, İ, ç, ö, ü) count as 1 character each, regardless of their UTF-8 byte width. Sizes are generous (`50 CHAR` for names and cities, `100 CHAR` for tariff names).
+- **`MONTHLY_STATS.CUSTOMER_ID` is `UNIQUE`** — each customer has exactly one monthly record by domain rule. Declaring uniqueness at the schema level prevents duplicate inserts and lets the optimizer use the unique index for joins.
+- **`CHECK` constraints** validate domain values: `PAYMENT_STATUS IN ('PAID', 'LATE', 'UNPAID')` and `usage >= 0` on every numeric resource column. Bad data cannot enter the database, even via a buggy ETL job.
+- **Targeted indexes** — secondary indexes on `TARIFF_ID`, `SIGNUP_DATE`, `CITY` (CUSTOMERS) and `PAYMENT_STATUS` (MONTHLY_STATS) cover the columns hit by `WHERE` / `GROUP BY` in the 11 analytical queries.
 
 ---
 
-### 6. Payment Analysis
+## 📊 Results Summary
 
-**6.1** Find the customers who have unpaid fees.  
-**6.2** Find the distribution of all payment statuses across the different tariffs.
+| # | Question | Result |
+|---|---|---|
+| **1.1** | Subscribers of the `Kobiye Destek` tariff | **2,483** customers |
+| **1.2** | Newest subscriber(s) of `Kobiye Destek` | **7 customers** tied on `2026-04-05` |
+| **2.1** | Distribution of tariffs across all customers | Kurumsal SMS 25.77% · Genç Dinamik 25.27% · Kobiye Destek 24.83% · Çalışan GB 24.13% |
+| **3.1** | Earliest customers to sign up (`2025-04-07`) | **35** customers (CUSTOMER_IDs scattered across the full range — earliest are *not* the lowest IDs) |
+| **3.2** | City distribution of the earliest customers | 30 distinct cities; ties at the top (ANTALYA, GAZİANTEP, SAKARYA, YOZGAT, ŞIRNAK with 2 each) |
+| **4.1** | Customers whose monthly record is missing | **50** customers (IDs include 6, 10, 31, 39, 45, 81, 116, 136, 140, 156, …) |
+| **4.2** | City distribution of missing customers | 39 distinct cities; OSMANİYE most affected (3); rest spread out, suggesting a random insertion failure rather than a regional issue |
+| **5.1** | Customers using ≥ 75% of their data limit | See SOLUTIONS.sql output (excludes `Kurumsal SMS` whose data limit is 0) |
+| **5.2** | Customers who completely exhausted ALL limits | **0 customers** — see ⚠️ note below |
+| **6.1** | Customers with unpaid (`UNPAID`) fees | **1,454** customers (≈ 14.6% of monthly records) |
+| **6.2** | Payment status by tariff (crosstab) | 4 rows × 4 columns (PAID / LATE / UNPAID / TOTAL); per-tariff totals sum to 9,950 |
+
+### ⚠️ Note on Q5.2
+
+The query for *"customers who have completely exhausted all of their package limits"* returns **0 rows** against the provided dataset. This is not a bug — it is a property of the generated data:
+
+| Resource | Maximum value observed | Tariff limit |
+|---|---:|---:|
+| `DATA_USAGE` | 20,476.31 | 20,480 |
+| `MINUTE_USAGE` | 999 | 1,000 |
+| `SMS_USAGE` | 9,999 | 10,000 |
+
+Every usage value in the dataset sits just below its corresponding limit, so no record satisfies `usage >= limit` simultaneously on data, minutes **and** SMS. The query is logically correct and would surface any qualifying customer the moment such a row appears in `MONTHLY_STATS`. The detailed reasoning is preserved in a comment block above the query in `SOLUTIONS.sql`.
 
 ---
 
-## Notes
+## 🧹 Cleanup
 
-* You have the creative freedom to design the database schema as you see fit, based on the provided dataset.
-* Pay close attention to applying the appropriate data types and constraints when creating your tables.
-* You may use DBeaver or SQL*Plus to handle the `.csv` data imports into Oracle XE.
-* Thoroughly test each query and document both the SQL statement and its resulting output in your submission.
+```bash
+docker stop oracle-xe                # stop, keep data
+docker start oracle-xe               # restart later — data persists
+docker rm -f oracle-xe               # remove container, keep volume
+docker volume rm oracle-volume       # nuke the data too
+```
+
+---
+
+## 📚 References
+
+- Original task template: <https://github.com/hantheemp/i2i-systems-telco-example>
+- `gvenzl/oracle-xe` image: <https://hub.docker.com/r/gvenzl/oracle-xe>
+- DBeaver Community: <https://dbeaver.io/>
